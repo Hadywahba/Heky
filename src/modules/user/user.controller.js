@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { successResponse } from "../../common/utils/index.js";
-import { editUser, showAllUsers, showUser } from "./user.service.js";
+import { deleteUser, editUser, showAllUsers, showUser } from "./user.service.js";
 
 const router =Router();
 
@@ -20,6 +20,12 @@ router.get('/:userid',async (req, res, next) => {
 router.patch('/:userid',async (req, res, next) => {
     const data = await editUser(req.params , req.body)
    return successResponse({res , status:200 , data , message:"Edit  User Successfully"})
+})
+
+// delete user
+router.delete('/:userid',async (req, res, next) => {
+    const data = await deleteUser(req.params)
+   return successResponse({res , status:200 , message:"User Deleted Successfully"})
 })
 
 export default router;

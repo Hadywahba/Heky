@@ -1,7 +1,7 @@
 
 import { UserModel } from "../../DB/model/index.js"
 import { ConflictException, NotFoundException } from "../../common/exceptions/index.js";
-import { find, findById, findByIdAndUpdate, findOne } from "../../common/repository/index.js";
+import { find, findById, findByIdAndDelete, findByIdAndUpdate, findOne } from "../../common/repository/index.js";
 import { ConvertToObjectId } from "../../common/utils/index.js";
 
 // get all users
@@ -82,5 +82,23 @@ export const editUser = async ({ userid }, inputs) => {
         });
     }
     return user
+
+}
+
+// Delete user
+
+export const deleteUser = async ({ userid }) => {
+
+    const user = await findByIdAndDelete({
+        model: UserModel,
+        id: ConvertToObjectId(userid),
+    })
+    if (!user) {
+        NotFoundException({
+            message: 'User not found',
+        });
+    }
+
+    return user;
 
 }
