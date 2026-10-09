@@ -7,11 +7,10 @@ import { bootstrapDB } from './DB/connection.db.js';
 
 
 const app = express()
+
 app.use(express.json());
 
 bootstrapDB(app ,PORT )
-
-
 
 
 app.get('/', (req, res) => res.send('Welcome To Our API'))
