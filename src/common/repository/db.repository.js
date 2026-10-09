@@ -26,7 +26,7 @@ export const insertMany = async ({ model, data, options = {} } = {}) => {
 
 // Find
 export const find = async ({ model, filter = {}, options = {}, select = '' } = {}) => {
-    const doc = await model.find(filter, options).select(select);
+    const doc =  model.find(filter, options).select(select);
     if (options.populate) {
         doc.populate(options.populate)
     }
@@ -34,7 +34,7 @@ export const find = async ({ model, filter = {}, options = {}, select = '' } = {
     if (options.skip) {
         doc.skip(options.skip)
     }
-     if (options.limit) {
+    if (options.limit) {
         doc.skip(options.limit)
     }
 
@@ -47,7 +47,7 @@ export const find = async ({ model, filter = {}, options = {}, select = '' } = {
 
 // FindOne
 export const findOne = async ({ model, filter = {}, options = {}, select = '' } = {}) => {
-    const doc = await model.findOne(filter, options).select(select);
+    const doc =  model.findOne(filter, options).select(select);
     if (options.populate) {
         doc.populate(options.populate)
     }
@@ -55,12 +55,12 @@ export const findOne = async ({ model, filter = {}, options = {}, select = '' } 
     if (options.lean) {
         doc.lean(options.lean)
     }
-    return await doc.exec()
+    return await doc.exec();
 };
 
 // FindById
 export const findById = async ({ model, id, options = {}, select = '' } = {}) => {
-    const doc = await model.findById(id, options).select(select);
+    const doc =  model.findById(id, options).select(select);
     if (options.populate) {
         doc.populate(options.populate)
     }
