@@ -1,7 +1,8 @@
 
 import { UserModel } from "../../DB/model/index.js"
 import { ConflictException, NotFoundException } from "../../common/exceptions/index.js";
-import { find, findById, findByIdAndDelete, findByIdAndUpdate, findOne } from "../../common/repository/index.js";
+import { find, findByIdAndDelete, findByIdAndUpdate, findOne } from "../../common/repository/index.js";
+import { decrypt } from "../../common/security/index.js";
 import { ConvertToObjectId } from "../../common/utils/index.js";
 
 // get all users
@@ -21,17 +22,10 @@ export const showAllUsers = async () => {
 }
 
 // get one user
-export const showUser = async ({ userid }) => {
-    const user = await findById({
-        model: UserModel,
-        id: ConvertToObjectId(userid),
-        select: '-password'
-    })
-    if (!user) {
-        NotFoundException({
-            message: 'User not found',
-        });
-    }
+export const showUser = async (user) => {
+  if(user.phone){
+    user.phone = await decrypt(user.phone)
+  }
     return user
 }
 

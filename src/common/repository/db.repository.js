@@ -26,7 +26,7 @@ export const insertMany = async ({ model, data, options = {} } = {}) => {
 
 // Find
 export const find = async ({ model, filter = {}, options = {}, select = '' } = {}) => {
-    const doc =  model.find(filter, options).select(select);
+    const doc = model.find(filter, options).select(select);
     if (options.populate) {
         doc.populate(options.populate)
     }
@@ -47,7 +47,7 @@ export const find = async ({ model, filter = {}, options = {}, select = '' } = {
 
 // FindOne
 export const findOne = async ({ model, filter = {}, options = {}, select = '' } = {}) => {
-    const doc =  model.findOne(filter, options).select(select);
+    const doc = model.findOne(filter, options).select(select);
     if (options.populate) {
         doc.populate(options.populate)
     }
@@ -59,8 +59,11 @@ export const findOne = async ({ model, filter = {}, options = {}, select = '' } 
 };
 
 // FindById
-export const findById = async ({ model, id, options = {}, select = '' } = {}) => {
-    const doc =  model.findById(id, options).select(select);
+export const findById = async ({ model, id, options = {} } = {}) => {
+    let doc = model.findById(id);
+    if (options.select) {
+        doc.select(options.select)
+    }
     if (options.populate) {
         doc.populate(options.populate)
     }
