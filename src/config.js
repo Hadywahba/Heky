@@ -33,3 +33,11 @@ export const REFRESH_ADMIN_TOKEN_SIGNATURE = process.env.REFRESH_ADMIN_TOKEN_SIG
 // Refresh_Token Expires
 export const REFRESH_EXPIRES_IN = parseInt(process.env.REFRESH_EXPIRES_IN ?? "31536000")
 
+
+// WEB_CLIENT_IDS For Google
+export const WEB_CLIENT_IDS = process.env.WEB_CLIENT_IDS.split(",")
+
+// GitHub OAuth
+export const GITHUB_CLIENT_IDS = process.env.GITHUB_CLIENT_IDS;
+export const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+export const GITHUB_CALLBACK_URL = process.env.GITHUB_CALLBACK_URL;

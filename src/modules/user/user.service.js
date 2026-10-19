@@ -23,14 +23,14 @@ export const showAllUsers = async () => {
 
 // get one user
 export const showUser = async (user) => {
-  if(user.phone){
-    user.phone = await decrypt(user.phone)
-  }
+    if (user.phone) {
+        user.phone = await decrypt(user.phone)
+    }
     return user
 }
 
 //editUser
-export const editUser = async ({ userid }, inputs) => {
+export const editUser = async (user, inputs) => {
     const { email, userName, ...rest } = inputs;
 
     if (email) {
@@ -38,7 +38,7 @@ export const editUser = async ({ userid }, inputs) => {
             model: UserModel,
             filter: {
                 email,
-                _id: { $ne: ConvertToObjectId(userid) },
+                _id: { $ne: ConvertToObjectId(user._id) },
             },
             select: 'email',
         })
@@ -58,9 +58,9 @@ export const editUser = async ({ userid }, inputs) => {
         update.lastName = lastNameParts.join(' ');
     }
 
-    const user = await findByIdAndUpdate({
+    const userAccount = await findByIdAndUpdate({
         model: UserModel,
-        id: ConvertToObjectId(userid),
+        id: ConvertToObjectId(user._id),
 
         update: {
             $set: update,
@@ -70,29 +70,28 @@ export const editUser = async ({ userid }, inputs) => {
         },
     })
 
-    if (!user) {
+    if (!userAccount) {
         NotFoundException({
             message: 'User not found',
         });
     }
-    return user
+    return userAccount
 
 }
 
 // Delete user
+export const deleteUser = async (user) => {
 
-export const deleteUser = async ({ userid }) => {
-
-    const user = await findByIdAndDelete({
+    const userAccount = await findByIdAndDelete({
         model: UserModel,
-        id: ConvertToObjectId(userid),
+        id: ConvertToObjectId(user._id),
     })
-    if (!user) {
+    if (!userAccount) {
         NotFoundException({
             message: 'User not found',
         });
     }
 
-    return user;
+    return userAccount;
 
 }

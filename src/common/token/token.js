@@ -16,6 +16,19 @@ export const generateToken = async ({
 
 }
 
+
+// **************************** Verify Token *********************************
+
+export const verifyToken = async ({
+    token = '',
+    signature = TokenTypeEnum.ACCESS,
+    options = {},
+}) => {
+
+    return jwt.verify(token, signature, options)
+
+}
+
 // *************************** decode Token ***********************************
 
 export const decodeToken = async ({ authorization, tokenType, issuer }) => {
@@ -103,19 +116,6 @@ export const getSignatureByRole = async (
 };
 
 
-// **************************** Verify Token *********************************
-
-export const verifyToken = async ({
-    token = '',
-    signature = TokenTypeEnum.ACCESS,
-    options = {},
-}) => {
-
-    return jwt.verify(token, signature, options)
-
-}
-
-
 // ****************************  Token Credintials *********************************
 
 export const createCredintials = async (account, issuer) => {
@@ -133,7 +133,7 @@ export const createCredintials = async (account, issuer) => {
 
         signature: signature.access
     })
-    console.log(signature)
+
     const refresh_Token = await generateToken({
         payload: {
             sub: account._id,

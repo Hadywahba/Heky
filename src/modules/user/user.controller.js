@@ -3,6 +3,7 @@ import { successResponse } from "../../common/utils/index.js";
 import { deleteUser, editUser, showAllUsers, showUser } from "./user.service.js";
 import { authenticationMiddleware } from "../../middleware/index.js";
 
+
 const router = Router();
 
 // get all users
@@ -18,14 +19,14 @@ router.get('/profile', authenticationMiddleware(), async (req, res) => {
 })
 
 // edit user
-router.patch('/:userid', async (req, res) => {
-    const data = await editUser(req.params, req.body)
+router.patch('/account', authenticationMiddleware(), async (req, res) => {
+    const data = await editUser(req.user, req.body)
     return successResponse({ res, status: 200, data, message: "Edit  User Successfully" })
 })
 
 // delete user
-router.delete('/:userid', async (req, res) => {
-    const data = await deleteUser(req.params)
+router.delete('/account', authenticationMiddleware(), async (req, res) => {
+    const data = await deleteUser(req.user)
     return successResponse({ res, status: 200, message: "User Deleted Successfully" })
 })
 
