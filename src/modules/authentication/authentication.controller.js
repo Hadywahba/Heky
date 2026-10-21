@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { login, rotateToken, signUp, signUpWithGamail, signUpWithGithub } from "./authentication.service.js";
+import { confirmEmail, forgotPassword, login, logOut, resetPassword, rotateToken, signUp, signUpWithGamail, signUpWithGithub } from "./authentication.service.js";
 import { successResponse } from "../../common/utils/index.js";
 import { authenticationMiddleware } from "../../middleware/index.js";
 import { TokenTypeEnum } from "../../common/enum/index.js";
@@ -10,8 +10,15 @@ const router = Router();
 // Sign up
 router.post('/signup', async (req, res, next) => {
    const data = await signUp(req.body)
-   return successResponse({ res, status: 201, data })
+   return successResponse({ res, status: 201, data, message: 'Confirmation email sent successfully. Please check your inbox.' })
 })
+
+// confirm-email
+router.patch('/confirm-email', async (req, res, next) => {
+   await confirmEmail(req.body)
+   return successResponse({ res, status: 200, message: 'Your email has been successfully confirmed' })
+})
+
 
 // Sign up With Google            change url from frontend
 router.post('/signupgggggggggg', async (req, res, next) => {
@@ -55,6 +62,19 @@ router.post('/signin', async (req, res, next) => {
    return successResponse({ res, status: 200, data })
 })
 
+// Forgot Password
+router.patch('/forgot-password', async (req, res, next) => {
+   await forgotPassword(req.body)
+   return successResponse({ res, status: 200, message: 'Your OTP has been Sent successfully' })
+})
+
+// Reset Password
+router.patch('/reset-password', async (req, res, next) => {
+   await resetPassword(req.body)
+   return successResponse({ res, status: 200, message: 'Your password has been reset successfully' })
+})
+
+
 // Rotate Token
 router.post('/rotate-token',
    authenticationMiddleware(TokenTypeEnum.REFRESH),
@@ -62,6 +82,16 @@ router.post('/rotate-token',
 
       const data = await rotateToken(req.payload, req.user, `${req.protocol}://${req.host}`)
       return successResponse({ res, status: 201, data })
+
+   })
+
+// Logout
+router.post('/logout',
+   authenticationMiddleware(),
+   async (req, res, next) => {
+
+      await logOut(req.payload, req.user, req.query)
+      return successResponse({ res, status: 200, message: 'Logout successfully ' })
 
    })
 

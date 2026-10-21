@@ -21,7 +21,7 @@ export const authenticationMiddleware = (tokenType = TokenTypeEnum.ACCESS) => {
         })
 
         req.user = user;
-        req.payload = payload
+        req.payload = payload;
 
         next()
 

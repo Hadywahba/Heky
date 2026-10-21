@@ -33,8 +33,17 @@ const userSchema = new mongoose.Schema({
         unique: true
     },
     DOB: Date,
+    ChangeAllCredintialTime: Date,
     image: String,
-    confirmEmail: Date,
+    confirmEmail: {
+        type: Date,
+    },
+    confirmEmailOTP: {
+        type: String,
+    },
+    forgotpasswordOTP: {
+        type: String,
+    },
     coverimage: [String],
     gender: {
         type: Number,

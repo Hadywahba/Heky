@@ -1,10 +1,12 @@
-import { ProviderEnum } from "../../common/enum/index.js";
+import { EmailSubjectEnum, LogOutTypeEnum, ProviderEnum, SecuirtyHashEnum } from "../../common/enum/index.js";
+import { emailEvent } from "../../common/events/index.js";
 import { BadRequestException, ConflictException, NotFoundException, UnauthorizedException } from "../../common/exceptions/index.js";
-import { createOne, findOne } from "../../common/repository/index.js"
+import { createOne, findOne, findOneAndUpdate, updateOne } from "../../common/repository/index.js"
 import { compare, encrypt, hash } from "../../common/security/index.js";
 import { createCredintials } from "../../common/token/index.js";
+import { ConvertToObjectId, cteateOTP } from "../../common/utils/index.js";
 import { ACCESS_EXPIRES_IN, WEB_CLIENT_IDS } from "../../config.js";
-import { UserModel } from "../../DB/model/index.js"
+import { TokenModel, UserModel } from "../../DB/model/index.js"
 import { OAuth2Client } from 'google-auth-library';
 
 
@@ -148,6 +150,13 @@ export const signUpWithGamail = async ({ idToken }, issuer) => {
 
 // Signup
 export const signUp = async ({ email, password, phone, DOB, userName, gender, role, provider }) => {
+
+    const otp = cteateOTP();
+    const hashedOTP = await hash({
+        approach: SecuirtyHashEnum.ARGON2,
+        plaintext: JSON.stringify(otp)
+    })
+
     const dublicateAccount = await findOne({
         model: UserModel,
         filter: { email },
@@ -169,22 +178,180 @@ export const signUp = async ({ email, password, phone, DOB, userName, gender, ro
             userName,
             gender,
             role,
-            provider
+            provider,
+            confirmEmailOTP: hashedOTP
         }
+    })
+
+    emailEvent.emit('confirmEmail', {
+        recipient: { to: email },
+        subject: EmailSubjectEnum.CONFIRM_EMAIL,
+        data: { code: otp, userName }
     })
     return Account
 
 }
 
-// Login
-export const login = async ({ email, password, provider }, issuer) => {
-    const account = await findOne({
+// Confirm Email
+export const confirmEmail = async ({ email, otp }) => {
+
+    const user = await findOne({
         model: UserModel,
-        filter: { email, provider: ProviderEnum.SYSTEM },
+        filter: {
+            email,
+            confirmEmail: { $exists: false },
+            confirmEmailOTP: { $exists: true },
+            provider: ProviderEnum.SYSTEM
+        },
     })
+
+    if (!user) {
+        BadRequestException({
+            message: "invalid account"
+        })
+    }
+
+    const isOTPValid = await compare(
+        String(otp),
+        user.confirmEmailOTP,
+        SecuirtyHashEnum.ARGON2,
+    )
+
+    if (!isOTPValid) {
+        BadRequestException({
+            message: "invalid OTP"
+        })
+    }
+
+    await updateOne({
+        model: UserModel,
+        update: {
+            confirmEmail: Date.now(),
+            $unset: { confirmEmailOTP: true }
+        },
+        filter: {
+            email,
+        },
+    })
+
+    return
+
+
+}
+
+// Forgot Password
+export const forgotPassword = async ({ email }) => {
+    const otp = cteateOTP();
+    const hashedOTP = await hash({
+        approach: SecuirtyHashEnum.ARGON2,
+        plaintext: JSON.stringify(otp)
+    })
+
+    const user = await findOneAndUpdate({
+        model: UserModel,
+        filter: {
+            email,
+            confirmEmail: { $exists: true },
+            provider: ProviderEnum.SYSTEM
+        },
+        update: {
+            forgotpasswordOTP: hashedOTP
+        }
+    })
+
+    if (!user) {
+        BadRequestException({
+            message: "invalid account"
+        })
+    }
+
+
+    emailEvent.emit('forgotPassword', {
+        recipient: { to: email },
+        subject: EmailSubjectEnum.FORGOT_PASSWORD,
+        data: { code: otp, userName: user.userName }
+    })
+
+    return
+
+
+}
+
+// Reset Password
+export const resetPassword = async ({ email, otp, newPassword }) => {
+
+    const user = await findOne({
+        model: UserModel,
+        filter: {
+            email,
+            confirmEmail: { $exists: true },
+            forgotpasswordOTP: { $exists: true },
+            provider: ProviderEnum.SYSTEM
+        },
+    })
+
+    if (!user) {
+        BadRequestException({
+            message: "invalid account"
+        })
+    }
+
+    const isOTPValid = await compare(
+        String(otp),
+        user.forgotpasswordOTP,
+        SecuirtyHashEnum.ARGON2,
+    )
+
+    if (!isOTPValid) {
+        BadRequestException({
+            message: "invalid OTP"
+        })
+    }
+
+    const hashPassword = await hash
+        ({ plaintext: newPassword })
+
+
+    await updateOne({
+        model: UserModel,
+        update: {
+            password: hashPassword,
+            $unset: { forgotpasswordOTP: true }
+        },
+        filter: {
+            email,
+        },
+    })
+
+    return
+
+
+}
+
+
+// Login
+export const login = async ({ email, password }, issuer) => {
+    const account = await findOneAndUpdate({
+        model: UserModel,
+        filter: {
+            email,
+            provider: ProviderEnum.SYSTEM,
+            // confirmEmail: { $exists: true },
+        },
+        update:{
+            $unset:{ChangeAllCredintialTime:true}
+        }
+    })
+
     if (!account) {
         NotFoundException({
             message: 'Account not found',
+        });
+    }
+
+    if (!account.confirmEmail) {
+        UnauthorizedException({
+            message: 'Your Email is not Confirmed',
         });
     }
 
@@ -213,4 +380,38 @@ export const rotateToken = async (payload, user, issuer) => {
 
 
     return await createCredintials(user, issuer)
+}
+
+// Logout
+export const logOut = async (decode, user, { flag }) => {
+
+    switch (flag) {
+        case LogOutTypeEnum.LOGOUT_FROM_ONE_DEVICE:
+            await createOne({
+                model: TokenModel,
+                data: {
+                    jti: decode.jti,
+                    userId: user._id,
+                    expiresIn: new Date(decode.exp * 1000)
+                }
+            });
+            break;
+
+        case LogOutTypeEnum.LOGOUT_FROM_ALL_DEVICES:
+            await updateOne({
+                model: UserModel,
+                update: {
+                    ChangeAllCredintialTime: Date.now()
+                },
+                filter: {
+                    _id: ConvertToObjectId(user._id),
+                }
+            })
+
+            break;
+    }
+
+
+
+    return
 }

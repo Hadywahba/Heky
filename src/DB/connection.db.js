@@ -1,6 +1,6 @@
 import mongoose from "mongoose"
 import { DB_URI } from "../config.js";
-import { UserModel } from "./model/index.js";
+import { TokenModel, UserModel } from "./model/index.js";
 
 
 
@@ -9,7 +9,8 @@ export const bootstrapDB = async (app, port) => {
 
         await mongoose.connect(DB_URI, { serverSelectionTimeoutMS: 5000 });
         console.log("DB Connected Successfully");
-         await UserModel.syncIndexes();
+        await UserModel.syncIndexes();
+        await TokenModel.syncIndexes();
         app.listen(port, () => console.log(`Example app listening on port ${port}!`))
 
     } catch (error) {

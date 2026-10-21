@@ -41,3 +41,15 @@ export const WEB_CLIENT_IDS = process.env.WEB_CLIENT_IDS.split(",")
 export const GITHUB_CLIENT_IDS = process.env.GITHUB_CLIENT_IDS;
 export const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 export const GITHUB_CALLBACK_URL = process.env.GITHUB_CALLBACK_URL;
+
+
+// GMAIL
+export const APP_PASSWORD = process.env.APP_PASSWORD;
+export const APP_EMAIL = process.env.APP_EMAIL;
+export const APP_NAME = process.env.APP_NAME;
+
+// Social Media
+export const FACEBOOK_URL = process.env.FACEBOOK_URL;
+export const INSTAGRAM_URL = process.env.INSTAGRAM_URL;
+export const LINKEDIN_URL = process.env.LINKEDIN_URL;
+export const X_URL = process.env.X_URL;

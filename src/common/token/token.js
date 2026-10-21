@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken"
 import { ACCESS_ADMIN_TOKEN_SIGNATURE, ACCESS_EXPIRES_IN, ACCESS_USER_TOKEN_SIGNATURE, REFRESH_ADMIN_TOKEN_SIGNATURE, REFRESH_EXPIRES_IN, REFRESH_USER_TOKEN_SIGNATURE } from "../../config.js"
 import { RoleEnum, TokenTypeEnum } from "../enum/index.js"
-import { findById } from "../repository/index.js"
+import { findById, findOne } from "../repository/index.js"
 import { BadRequestException, NotFoundException } from "../exceptions/index.js"
-import { UserModel } from "../../DB/model/index.js"
-
+import { TokenModel, UserModel } from "../../DB/model/index.js"
+import { v4 as uuid } from 'uuid'
 // *************************** Generate Token *********************************
 export const generateToken = async ({
     payload = {},
@@ -59,6 +59,19 @@ export const decodeToken = async ({ authorization, tokenType, issuer }) => {
         })
     }
 
+    const isRevoked = await findOne({
+        model: TokenModel,
+        filter: {
+            jti: payload.jti
+        }
+    })
+
+    if (isRevoked) {
+        BadRequestException({
+            message: 'Token is revoked , please login again'
+        })
+    }
+
     const user = await findById({
         model: UserModel,
         id: payload.sub,
@@ -67,6 +80,14 @@ export const decodeToken = async ({ authorization, tokenType, issuer }) => {
 
         }
     })
+
+    if (user.ChangeAllCredintialTime?.getTime() || 0 > payload.iat * 1000) {
+        BadRequestException({
+            message: ' please login again'
+        })
+    }
+
+
 
     // Check User
     if (!user) {
@@ -119,7 +140,8 @@ export const getSignatureByRole = async (
 // ****************************  Token Credintials *********************************
 
 export const createCredintials = async (account, issuer) => {
-    const signature = await getSignatureByRole(account.role)
+    const signature = await getSignatureByRole(account.role);
+    const jwtid = uuid()
     const access_Token = await generateToken({
         payload: {
             sub: account._id,
@@ -128,7 +150,8 @@ export const createCredintials = async (account, issuer) => {
         options: {
             expiresIn: ACCESS_EXPIRES_IN,
             issuer,
-            audience: [account.role]
+            audience: [account.role],
+            jwtid
         },
 
         signature: signature.access
@@ -142,7 +165,8 @@ export const createCredintials = async (account, issuer) => {
         options: {
             expiresIn: REFRESH_EXPIRES_IN,
             issuer,
-            audience: [account.role]
+            audience: [account.role],
+            jwtid
         },
 
         signature: signature.refresh

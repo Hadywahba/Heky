@@ -1,0 +1,1 @@
+export * from './confirm-email.template.js'
