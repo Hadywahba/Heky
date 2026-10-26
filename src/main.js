@@ -10,6 +10,7 @@ import passport from "passport";
 
 
 
+
 const app = express()
 app.use(cors())
 app.use(express.json());
@@ -20,6 +21,7 @@ app.get('/', (req, res) => res.send('Welcome To Our API'))
 app.use('/auth', authenticationController)
 app.use('/message', messageController)
 app.use('/user', userController)
+
 
 
 

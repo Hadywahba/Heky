@@ -1,15 +1,17 @@
 import { Router } from "express";
 import { confirmEmail, forgotPassword, login, logOut, resetPassword, rotateToken, signUp, signUpWithGamail, signUpWithGithub } from "./authentication.service.js";
 import { successResponse } from "../../common/utils/index.js";
-import { authenticationMiddleware } from "../../middleware/index.js";
+import { authenticationMiddleware, validation } from "../../middleware/index.js";
 import { TokenTypeEnum } from "../../common/enum/index.js";
 import passport from "passport";
+import * as validators from './authentication.validation.js'
+
 
 const router = Router();
 
 // Sign up
-router.post('/signup', async (req, res, next) => {
-   const data = await signUp(req.body)
+router.post('/signup', validation(validators.signUp), async (req, res, next) => {
+   const data = await signUp(req.validate.body ,  req.language)
    return successResponse({ res, status: 201, data, message: 'Confirmation email sent successfully. Please check your inbox.' })
 })
 
@@ -57,8 +59,8 @@ router.get(
 
 
 // Sign In
-router.post('/signin', async (req, res, next) => {
-   const data = await login(req.body, `${req.protocol}://${req.host}`)
+router.post('/signin', validation(validators.login), async (req, res, next) => {
+   const data = await login(req.validate.body, `${req.protocol}://${req.host}`)
    return successResponse({ res, status: 200, data })
 })
 

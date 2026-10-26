@@ -1,5 +1,6 @@
 export * from './user.gender.enum.js'
 export * from './user.role.enum.js'
+export * from './lang.enum.js'
 export * from './user.provider.enum.js'
 export * from './email.subject.enum.js'
 export * from './security.hash.enum.js'

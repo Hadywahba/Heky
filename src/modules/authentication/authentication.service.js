@@ -4,7 +4,7 @@ import { BadRequestException, ConflictException, NotFoundException, Unauthorized
 import { createOne, findOne, findOneAndUpdate, updateOne } from "../../common/repository/index.js"
 import { compare, encrypt, hash } from "../../common/security/index.js";
 import { createCredintials } from "../../common/token/index.js";
-import { ConvertToObjectId, cteateOTP } from "../../common/utils/index.js";
+import { ConvertToObjectId, cteateOTP, getValidationMessage } from "../../common/utils/index.js";
 import { ACCESS_EXPIRES_IN, WEB_CLIENT_IDS } from "../../config.js";
 import { TokenModel, UserModel } from "../../DB/model/index.js"
 import { OAuth2Client } from 'google-auth-library';
@@ -149,7 +149,7 @@ export const signUpWithGamail = async ({ idToken }, issuer) => {
 
 
 // Signup
-export const signUp = async ({ email, password, phone, DOB, userName, gender, role, provider }) => {
+export const signUp = async ({ email, password, phone, DOB, userName, gender, role, provider }, lang) => {
 
     const otp = cteateOTP();
     const hashedOTP = await hash({
@@ -164,7 +164,7 @@ export const signUp = async ({ email, password, phone, DOB, userName, gender, ro
     })
     if (dublicateAccount) {
         ConflictException({
-            message: 'Email already exists',
+            message: getValidationMessage(lang, 120),
         });
     }
 
@@ -336,10 +336,9 @@ export const login = async ({ email, password }, issuer) => {
         filter: {
             email,
             provider: ProviderEnum.SYSTEM,
-            // confirmEmail: { $exists: true },
         },
-        update:{
-            $unset:{ChangeAllCredintialTime:true}
+        update: {
+            $unset: { ChangeAllCredintialTime: true }
         }
     })
 

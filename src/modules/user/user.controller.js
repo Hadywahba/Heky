@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { successResponse } from "../../common/utils/index.js";
 import { deleteUser, editUser, showAllUsers, showUser } from "./user.service.js";
-import { authenticationMiddleware } from "../../middleware/index.js";
-
+import { authenticationMiddleware, validation } from "../../middleware/index.js";
+import * as validators from './user.validation.js'
 
 const router = Router();
 
@@ -19,8 +19,8 @@ router.get('/profile', authenticationMiddleware(), async (req, res) => {
 })
 
 // edit user
-router.patch('/account', authenticationMiddleware(), async (req, res) => {
-    const data = await editUser(req.user, req.body)
+router.patch('/account', authenticationMiddleware(), validation(validators.userSchema), async (req, res) => {
+    const data = await editUser(req.user, req.validate.body, req.language)
     return successResponse({ res, status: 200, data, message: "Edit  User Successfully" })
 })
 

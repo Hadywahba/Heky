@@ -3,7 +3,7 @@ import { UserModel } from "../../DB/model/index.js"
 import { ConflictException, NotFoundException } from "../../common/exceptions/index.js";
 import { find, findByIdAndDelete, findByIdAndUpdate, findOne } from "../../common/repository/index.js";
 import { decrypt } from "../../common/security/index.js";
-import { ConvertToObjectId } from "../../common/utils/index.js";
+import { ConvertToObjectId, getValidationMessage } from "../../common/utils/index.js";
 
 // get all users
 export const showAllUsers = async () => {
@@ -30,7 +30,7 @@ export const showUser = async (user) => {
 }
 
 //editUser
-export const editUser = async (user, inputs) => {
+export const editUser = async (user, inputs, lang) => {
     const { email, userName, ...rest } = inputs;
 
     if (email) {
@@ -44,12 +44,16 @@ export const editUser = async (user, inputs) => {
         })
         if (existingUser) {
             ConflictException({
-                message: 'Email already exists',
+                message: getValidationMessage(lang, 120),
             });
         }
     }
 
     const update = { ...rest };
+
+    if (email !== undefined) {
+        update.email = email;
+    }
 
     if (userName !== undefined) {
         const [firstName, ...lastNameParts] = userName.trim().split(/\s+/);

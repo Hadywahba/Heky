@@ -9,6 +9,10 @@ const transporter = nodemailer.createTransport({
         user: APP_EMAIL,
         pass: APP_PASSWORD,
     },
+    // logger: true,
+    // debug: false,
+    // connectionTimeout: 20000,
+    // greetingTimeout: 15000,
 });
 
 export const sendEmail = async ({ to, cc, bcc, subject, text, html, attachments = [] }) => {
@@ -25,6 +29,7 @@ export const sendEmail = async ({ to, cc, bcc, subject, text, html, attachments 
                 message: 'Missing email content'
             })
         }
+        console.time('sendMail duration');
         const info = await transporter.sendMail({
             from: `"${APP_NAME}" <${APP_EMAIL}>`,
             to,
@@ -33,11 +38,9 @@ export const sendEmail = async ({ to, cc, bcc, subject, text, html, attachments 
             subject,
             text,
             html,
-            attachments
         });
 
         console.log("Email sent successfully:", info.messageId);
-
         console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
     } catch (err) {
         console.error("Error while sending mail:", err);
