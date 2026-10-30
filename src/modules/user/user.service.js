@@ -3,6 +3,8 @@ import { UserModel } from "../../DB/model/index.js"
 import { ConflictException, NotFoundException } from "../../common/exceptions/index.js";
 import { find, findByIdAndDelete, findByIdAndUpdate, findOne } from "../../common/repository/index.js";
 import { decrypt } from "../../common/security/index.js";
+import { del, get, keys, set } from "../../common/services/index.js";
+import { userProfileKey } from "../../common/token/index.js";
 import { ConvertToObjectId, getValidationMessage } from "../../common/utils/index.js";
 
 // get all users
@@ -21,13 +23,38 @@ export const showAllUsers = async () => {
     return users
 }
 
-// get one user
+// Get One User
 export const showUser = async (user) => {
-    if (user.phone) {
-        user.phone = await decrypt(user.phone)
+    const key = userProfileKey({ userId: user._id });
+
+    // Check Cache
+    const cachedProfile = await get({ key });
+
+    if (cachedProfile) {
+        if (cachedProfile.phone) {
+            cachedProfile.phone = await decrypt(cachedProfile.phone);
+        }
+
+        return cachedProfile;
     }
-    return user
-}
+
+    // Cache Miss
+    const profile = user.toObject();
+
+    // Save Encrypted Profile in Redis
+    await set({
+        key,
+        value: profile,
+        ttl: 60 * 15,
+    });
+
+    // Decrypt Phone Before Returning
+    if (profile.phone) {
+        profile.phone = await decrypt(profile.phone);
+    }
+
+    return profile;
+};
 
 //editUser
 export const editUser = async (user, inputs, lang) => {
@@ -79,6 +106,10 @@ export const editUser = async (user, inputs, lang) => {
             message: 'User not found',
         });
     }
+
+    await del({
+        key: userProfileKey({ userId: user._id }),
+    });
     return userAccount
 
 }
@@ -95,6 +126,10 @@ export const deleteUser = async (user) => {
             message: 'User not found',
         });
     }
+
+    await del({
+        key: userProfileKey({ userId: user._id }),
+    });
 
     return userAccount;
 

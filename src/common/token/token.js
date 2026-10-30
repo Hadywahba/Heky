@@ -7,13 +7,21 @@ import { UserModel } from "../../DB/model/index.js"
 import { v4 as uuid } from 'uuid'
 import { exist, set } from "../services/index.js"
 
+export const userBaseKey = ({ userId }) => {
+    return `User :: ${userId.toString()}`
+}
+
+// Profile Cache
+export const userProfileKey = ({ userId }) => {
+    return `${userBaseKey({ userId })} :: Profile`;
+};
 
 export const userBaserevokeTokenKey = ({ userId }) => {
-    return `User :: ${userId.toString()} :: Revoke Token`
+    return `${userBaseKey({ userId })} :: Revoke Token`
 }
 
 export const revokeTokenKey = ({ userId, jti }) => {
-    return `${userBaserevokeTokenKey({userId})} :: ${jti}`
+    return `${userBaserevokeTokenKey({ userId })} :: ${jti}`
 }
 
 
