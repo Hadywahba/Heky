@@ -11,7 +11,7 @@ const router = Router();
 
 // Sign up
 router.post('/signup', validation(validators.signUp), async (req, res, next) => {
-   const data = await signUp(req.validate.body ,  req.language)
+   const data = await signUp(req.validate.body, req.language)
    return successResponse({ res, status: 201, data, message: 'Confirmation email sent successfully. Please check your inbox.' })
 })
 
@@ -91,8 +91,7 @@ router.post('/rotate-token',
 router.post('/logout',
    authenticationMiddleware(),
    async (req, res, next) => {
-
-      await logOut(req.payload, req.user, req.query)
+      await logOut(req.payload, req.user, req.body)
       return successResponse({ res, status: 200, message: 'Logout successfully ' })
 
    })

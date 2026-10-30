@@ -1,10 +1,23 @@
 import jwt from "jsonwebtoken"
 import { ACCESS_ADMIN_TOKEN_SIGNATURE, ACCESS_EXPIRES_IN, ACCESS_USER_TOKEN_SIGNATURE, REFRESH_ADMIN_TOKEN_SIGNATURE, REFRESH_EXPIRES_IN, REFRESH_USER_TOKEN_SIGNATURE } from "../../config.js"
 import { RoleEnum, TokenTypeEnum } from "../enum/index.js"
-import { findById, findOne } from "../repository/index.js"
-import { BadRequestException, NotFoundException } from "../exceptions/index.js"
-import { TokenModel, UserModel } from "../../DB/model/index.js"
+import { findById } from "../repository/index.js"
+import { BadRequestException, NotFoundException, UnauthorizedException } from "../exceptions/index.js"
+import { UserModel } from "../../DB/model/index.js"
 import { v4 as uuid } from 'uuid'
+import { exist, set } from "../services/index.js"
+
+
+export const userBaserevokeTokenKey = ({ userId }) => {
+    return `User :: ${userId.toString()} :: Revoke Token`
+}
+
+export const revokeTokenKey = ({ userId, jti }) => {
+    return `${userBaserevokeTokenKey({userId})} :: ${jti}`
+}
+
+
+
 // *************************** Generate Token *********************************
 export const generateToken = async ({
     payload = {},
@@ -59,15 +72,8 @@ export const decodeToken = async ({ authorization, tokenType, issuer }) => {
         })
     }
 
-    const isRevoked = await findOne({
-        model: TokenModel,
-        filter: {
-            jti: payload.jti
-        }
-    })
-
-    if (isRevoked) {
-        BadRequestException({
+    if (await exist({ key: revokeTokenKey({ userId: payload.sub, jti: payload.jti }) })) {
+        UnauthorizedException({
             message: 'Token is revoked , please login again'
         })
     }
@@ -81,7 +87,7 @@ export const decodeToken = async ({ authorization, tokenType, issuer }) => {
         }
     })
 
-    if (user.ChangeAllCredintialTime?.getTime() || 0 > payload.iat * 1000) {
+    if ((user.ChangeAllCredintialTime?.getTime() ?? 0) > payload.iat * 1000) {
         BadRequestException({
             message: ' please login again'
         })
@@ -173,4 +179,26 @@ export const createCredintials = async (account, issuer) => {
     })
 
     return { access_Token, refresh_Token }
+}
+
+
+// ***************************  Revoke Token ****************************************
+export const CreateRevokeToken = async ({ payload }) => {
+    // consume time (s) from access
+    const timeConsume = (Math.ceil(Date.now() / 1000) - payload.iat)
+    const ttl = REFRESH_EXPIRES_IN - timeConsume;
+
+    console.log({
+        payload, timeConsume, ttlMinutes: Math.ceil(ttl / 60),
+        ttlHours: Math.ceil(ttl / 3600),
+        ttlDays: Math.ceil(ttl / 86400),
+        ttl
+    })
+
+    await set({
+        key: revokeTokenKey({ userId: payload.sub, jti: payload.jti }),
+        value: `${payload.jti}`,
+        ttl
+    })
+    return
 }

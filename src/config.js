@@ -12,6 +12,9 @@ export const PORT = parseInt(process.env.PORT ?? "9000")
 //  DB URL
 export const DB_URI = process.env.DB_URI
 
+// Redis URI
+export const REDIS_URI = process.env.REDIS_URI
+
 // Hash
 export const SALT = parseInt(process.env.SALT ?? "12")
 

@@ -3,10 +3,11 @@ import { emailEvent } from "../../common/events/index.js";
 import { BadRequestException, ConflictException, NotFoundException, UnauthorizedException } from "../../common/exceptions/index.js";
 import { createOne, findOne, findOneAndUpdate, updateOne } from "../../common/repository/index.js"
 import { compare, encrypt, hash } from "../../common/security/index.js";
-import { createCredintials } from "../../common/token/index.js";
-import { ConvertToObjectId, cteateOTP, getValidationMessage } from "../../common/utils/index.js";
+import { del, keys } from "../../common/services/index.js";
+import { createCredintials, CreateRevokeToken, userBaserevokeTokenKey } from "../../common/token/index.js";
+import { cteateOTP, getValidationMessage } from "../../common/utils/index.js";
 import { ACCESS_EXPIRES_IN, WEB_CLIENT_IDS } from "../../config.js";
-import { TokenModel, UserModel } from "../../DB/model/index.js"
+import { UserModel } from "../../DB/model/index.js"
 import { OAuth2Client } from 'google-auth-library';
 
 
@@ -377,40 +378,30 @@ export const rotateToken = async (payload, user, issuer) => {
         })
     }
 
+    const data = await createCredintials(user, issuer)
+    await CreateRevokeToken({ payload })
+    return data
 
-    return await createCredintials(user, issuer)
 }
 
 // Logout
-export const logOut = async (decode, user, { flag }) => {
+export const logOut = async (payload, user, { action = LogOutTypeEnum.LOGOUT_FROM_ONE_DEVICE }) => {
 
-    switch (flag) {
-        case LogOutTypeEnum.LOGOUT_FROM_ONE_DEVICE:
-            await createOne({
-                model: TokenModel,
-                data: {
-                    jti: decode.jti,
-                    userId: user._id,
-                    expiresIn: new Date(decode.exp * 1000)
-                }
-            });
+    switch (action) {
+        case LogOutTypeEnum.LOGOUT_FROM_ALL_DEVICES:
+            user.ChangeAllCredintialTime = new Date();
+            await user.save();
+            await del({
+                key: await keys({
+                    prefix: userBaserevokeTokenKey({ userId: payload.sub })
+                })
+            })
             break;
 
-        case LogOutTypeEnum.LOGOUT_FROM_ALL_DEVICES:
-            await updateOne({
-                model: UserModel,
-                update: {
-                    ChangeAllCredintialTime: Date.now()
-                },
-                filter: {
-                    _id: ConvertToObjectId(user._id),
-                }
-            })
+        default:
+            return await CreateRevokeToken({ payload })
 
             break;
     }
 
-
-
-    return
 }

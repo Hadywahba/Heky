@@ -1,4 +1,4 @@
 export const LogOutTypeEnum = {
-    LOGOUT_FROM_ONE_DEVICE: 'OneDevice',
-    LOGOUT_FROM_ALL_DEVICES: 'AllDevices',
+    LOGOUT_FROM_ONE_DEVICE: 0,
+    LOGOUT_FROM_ALL_DEVICES: 1,
 }
