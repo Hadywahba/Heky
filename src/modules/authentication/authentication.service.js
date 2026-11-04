@@ -1,15 +1,17 @@
-import { EmailSubjectEnum, LogOutTypeEnum, ProviderEnum, SecuirtyHashEnum } from "../../common/enum/index.js";
+import { EmailSubjectEnum, LogOutTypeEnum, ProviderEnum } from "../../common/enum/index.js";
 import { emailEvent } from "../../common/events/index.js";
-import { BadRequestException, ConflictException, NotFoundException, UnauthorizedException } from "../../common/exceptions/index.js";
-import { createOne, findOne, findOneAndUpdate, updateOne } from "../../common/repository/index.js"
+import { BadRequestException, ConflictException, TooManyRequestsException, UnauthorizedException } from "../../common/exceptions/index.js";
+import { resetPasswordKey, UserEmailKey, UserEmailLoginTrialsKey, UserEmailTrialsKey } from "../../common/keys/index.js";
+import { createOne, findOne, updateOne } from "../../common/repository/index.js"
 import { compare, encrypt, hash } from "../../common/security/index.js";
-import { del, keys } from "../../common/services/index.js";
+import { del, expire, get, incrBY, keys, set, ttl } from "../../common/services/index.js";
 import { createCredintials, CreateRevokeToken, userBaserevokeTokenKey } from "../../common/token/index.js";
+import { checkEmailBlock, recordFailedAttempt } from "../../common/utils/index.js";
 import { cteateOTP, getValidationMessage } from "../../common/utils/index.js";
 import { ACCESS_EXPIRES_IN, WEB_CLIENT_IDS } from "../../config.js";
 import { UserModel } from "../../DB/model/index.js"
 import { OAuth2Client } from 'google-auth-library';
-
+import crypto from 'node:crypto';
 
 const client = new OAuth2Client();
 
@@ -149,14 +151,59 @@ export const signUpWithGamail = async ({ idToken }, issuer) => {
 }
 
 
+// send Email Otp
+const sendEmailOtp = async ({
+    email,
+    userName,
+    subject,
+    expires = 120,
+    maxtries = 3,
+    blockInSecond = 300,
+    eventName = 'confirmEmail',
+}) => {
+    const existOtp_TTL = await ttl({ key: UserEmailKey({ email, subject }), })
+
+    if (existOtp_TTL > 0) {
+        ConflictException({
+            message: `You can request a new OTP after ${existOtp_TTL} seconds`
+        })
+    }
+
+    const oldTrials = await get({ key: UserEmailTrialsKey({ email, subject }) }) ?? 0
+    const remainingTime = await ttl({ key: UserEmailTrialsKey({ email, subject }) });
+
+    if (oldTrials >= maxtries) {
+        TooManyRequestsException({
+            message: `Maximum OTP attempts reached. Please try again after ${remainingTime} minute(s).`,
+        });
+    }
+    const otp = cteateOTP();
+    await set({
+        key: UserEmailKey({ email, subject }),
+        value: await hash({
+            plaintext: otp.toString()
+        }),
+        ttl: expires
+    })
+
+    const currentTrials = await incrBY({
+        key: UserEmailTrialsKey({ email, subject }),
+    })
+
+    if (currentTrials == maxtries) {
+        await expire({ key: UserEmailTrialsKey({ email, subject }), ttl: blockInSecond })
+    }
+    emailEvent.emit(eventName, {
+        recipient: { to: email },
+        subject,
+        data: { code: otp, userName }
+    })
+
+}
+
+
 // Signup
 export const signUp = async ({ email, password, phone, DOB, userName, gender, role, provider }, lang) => {
-
-    const otp = cteateOTP();
-    const hashedOTP = await hash({
-        approach: SecuirtyHashEnum.ARGON2,
-        plaintext: JSON.stringify(otp)
-    })
 
     const dublicateAccount = await findOne({
         model: UserModel,
@@ -180,15 +227,11 @@ export const signUp = async ({ email, password, phone, DOB, userName, gender, ro
             gender,
             role,
             provider,
-            confirmEmailOTP: hashedOTP
         }
     })
 
-    emailEvent.emit('confirmEmail', {
-        recipient: { to: email },
-        subject: EmailSubjectEnum.CONFIRM_EMAIL,
-        data: { code: otp, userName }
-    })
+    await sendEmailOtp({ email, userName, subject: EmailSubjectEnum.CONFIRM_EMAIL })
+
     return Account
 
 }
@@ -201,7 +244,6 @@ export const confirmEmail = async ({ email, otp }) => {
         filter: {
             email,
             confirmEmail: { $exists: false },
-            confirmEmailOTP: { $exists: true },
             provider: ProviderEnum.SYSTEM
         },
     })
@@ -212,14 +254,12 @@ export const confirmEmail = async ({ email, otp }) => {
         })
     }
 
-    const isOTPValid = await compare(
-        String(otp),
-        user.confirmEmailOTP,
-        SecuirtyHashEnum.ARGON2,
-    )
+    const isOTPValid = await get({
+        key: UserEmailKey({ email, subject: EmailSubjectEnum.CONFIRM_EMAIL }),
+    })
 
-    if (!isOTPValid) {
-        BadRequestException({
+    if (!isOTPValid || !(await compare(otp, isOTPValid))) {
+        ConflictException({
             message: "invalid OTP"
         })
     }
@@ -228,12 +268,42 @@ export const confirmEmail = async ({ email, otp }) => {
         model: UserModel,
         update: {
             confirmEmail: Date.now(),
-            $unset: { confirmEmailOTP: true }
         },
         filter: {
             email,
         },
     })
+
+    await del({
+        key: await keys({
+            prefix: UserEmailKey({ email, subject: EmailSubjectEnum.CONFIRM_EMAIL })
+        }),
+    })
+
+    return
+
+
+}
+
+// ResendConfirmEmail
+export const resendConfirmEmail = async ({ email }) => {
+
+    const user = await findOne({
+        model: UserModel,
+        filter: {
+            email,
+            confirmEmail: { $exists: false },
+            provider: ProviderEnum.SYSTEM
+        },
+    })
+
+    if (!user) {
+        ConflictException({
+            message: "Your email is already confirmed or invalid account"
+        })
+    }
+
+    await sendEmailOtp({ email, userName: user.userName, subject: EmailSubjectEnum.CONFIRM_EMAIL })
 
     return
 
@@ -242,51 +312,12 @@ export const confirmEmail = async ({ email, otp }) => {
 
 // Forgot Password
 export const forgotPassword = async ({ email }) => {
-    const otp = cteateOTP();
-    const hashedOTP = await hash({
-        approach: SecuirtyHashEnum.ARGON2,
-        plaintext: JSON.stringify(otp)
-    })
-
-    const user = await findOneAndUpdate({
-        model: UserModel,
-        filter: {
-            email,
-            confirmEmail: { $exists: true },
-            provider: ProviderEnum.SYSTEM
-        },
-        update: {
-            forgotpasswordOTP: hashedOTP
-        }
-    })
-
-    if (!user) {
-        BadRequestException({
-            message: "invalid account"
-        })
-    }
-
-
-    emailEvent.emit('forgotPassword', {
-        recipient: { to: email },
-        subject: EmailSubjectEnum.FORGOT_PASSWORD,
-        data: { code: otp, userName: user.userName }
-    })
-
-    return
-
-
-}
-
-// Reset Password
-export const resetPassword = async ({ email, otp, newPassword }) => {
 
     const user = await findOne({
         model: UserModel,
         filter: {
             email,
             confirmEmail: { $exists: true },
-            forgotpasswordOTP: { $exists: true },
             provider: ProviderEnum.SYSTEM
         },
     })
@@ -297,55 +328,156 @@ export const resetPassword = async ({ email, otp, newPassword }) => {
         })
     }
 
-    const isOTPValid = await compare(
-        String(otp),
-        user.forgotpasswordOTP,
-        SecuirtyHashEnum.ARGON2,
-    )
 
-    if (!isOTPValid) {
-        BadRequestException({
-            message: "invalid OTP"
-        })
-    }
-
-    const hashPassword = await hash
-        ({ plaintext: newPassword })
-
-
-    await updateOne({
-        model: UserModel,
-        update: {
-            password: hashPassword,
-            $unset: { forgotpasswordOTP: true }
-        },
-        filter: {
-            email,
-        },
-    })
+    await sendEmailOtp({
+        email,
+        userName: user.userName,
+        subject: EmailSubjectEnum.FORGOT_PASSWORD,
+        eventName: 'forgotPassword',
+    });
 
     return
 
 
 }
 
+// verify Password
+export const verifyPassword = async ({ email, otp }) => {
+
+    const user = await findOne({
+        model: UserModel,
+        filter: {
+            email,
+            confirmEmail: { $exists: true },
+            provider: ProviderEnum.SYSTEM
+        },
+    })
+
+    if (!user) {
+        BadRequestException({
+            message: "invalid account"
+        })
+    }
+
+    const isOTPValid = await get({
+        key: UserEmailKey({ email, subject: EmailSubjectEnum.FORGOT_PASSWORD }),
+    })
+
+    if (!isOTPValid || !(await compare(otp, isOTPValid))) {
+        ConflictException({
+            message: "invalid OTP"
+        })
+    }
+
+    await del({
+        key: await keys({
+            prefix: UserEmailKey({ email, subject: EmailSubjectEnum.FORGOT_PASSWORD })
+        }),
+    })
+
+    const resetToken = crypto.randomUUID();
+
+    await set({
+        key: resetPasswordKey(resetToken),
+        value: email,
+        ttl: 300,
+    });
+
+    return resetToken
+
+
+}
+
+// Reset Password
+export const resetPassword = async ({ email, newPassword, resetToken }) => {
+    const key = resetPasswordKey(resetToken);
+
+    const tokenEmail = await get({ key });
+
+    if (!tokenEmail || tokenEmail !== email) {
+        BadRequestException({
+            message: 'Invalid or expired reset token',
+        });
+    }
+
+    const user = await findOne({
+        model: UserModel,
+        filter: {
+            email,
+            confirmEmail: { $exists: true },
+            provider: ProviderEnum.SYSTEM,
+        },
+    });
+
+    if (!user) {
+        BadRequestException({
+            message: 'Invalid account',
+        });
+    }
+
+    const hashPassword = await hash({
+        plaintext: newPassword,
+    });
+
+    await updateOne({
+        model: UserModel,
+        filter: { _id: user._id },
+        update: {
+            $set: {
+                password: hashPassword,
+                ChangeAllCredintialTime: new Date(),
+            },
+        },
+    });
+
+    const revokeKeys = await keys({
+        prefix: userBaserevokeTokenKey({ userId: user._id }),
+    });
+
+    if (revokeKeys.length) {
+        await Promise.all(
+            revokeKeys.map((revokeKey) => del({ key: revokeKey }))
+        );
+    }
+
+    await del({ key });
+
+    return;
+};
+
 
 // Login
 export const login = async ({ email, password }, issuer) => {
-    const account = await findOneAndUpdate({
+
+    const subject = 'login';
+
+    // Check Block
+    await checkEmailBlock({ email, subject });
+
+    const account = await findOne({
         model: UserModel,
         filter: {
             email,
             provider: ProviderEnum.SYSTEM,
+            confirmEmail: { $exists: true },
         },
-        update: {
-            $unset: { ChangeAllCredintialTime: true }
-        }
-    })
+    });
 
     if (!account) {
-        NotFoundException({
-            message: 'Account not found',
+        await recordFailedAttempt({ email, subject });
+
+        UnauthorizedException({
+            message: 'Invalid email or password',
+        });
+    }
+
+    const match = await compare(password, account.password);
+
+    if (!match) {
+        await recordFailedAttempt({ email, subject });
+
+        UnauthorizedException({
+            message: 'Invalid email or password',
         });
     }
 
@@ -355,17 +487,23 @@ export const login = async ({ email, password }, issuer) => {
         });
     }
 
-    const match = await compare(password, account.password)
-    if (!match) {
-        UnauthorizedException({
-            message: 'Invalid password',
-        });
-    }
+    // Reset Trials After Successful Login
+    await del({
+        key: UserEmailLoginTrialsKey({ email, subject }),
+    });
 
-    return await createCredintials(account, issuer)
+    // await updateOne({
+    //     model: UserModel,
+    //     filter: { _id: account._id },
+    //     update: {
+    //         $unset: {
+    //             ChangeAllCredintialTime: true,
+    //         },
+    //     },
+    // });
 
-
-}
+    return await createCredintials(account, issuer);
+};
 
 // Rotate Token
 export const rotateToken = async (payload, user, issuer) => {

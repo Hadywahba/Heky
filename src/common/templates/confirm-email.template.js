@@ -55,12 +55,7 @@ export const templates = {
                 <!-- Header -->
                 <tr>
                     <td align="center" style="background-color:#0759e6;padding:28px 20px;">
-                        <img
-                            src="cid:app-logo"
-                            alt="${APP_NAME} Logo"
-                            width="150"
-                            style="display:block;width:150px;max-width:100%;height:auto;border:0;"
-                        />
+                        <h1 style = "text-center">Heky</h1>
                     </td>
                 </tr>
 
@@ -197,12 +192,7 @@ export const templates = {
                 <!-- Header -->
                 <tr>
                     <td align="center" style="background-color:#0759e6;padding:28px 20px;">
-                        <img
-                            src="cid:app-logo"
-                            alt="${APP_NAME} Logo"
-                            width="150"
-                            style="display:block;width:150px;max-width:100%;height:auto;border:0;"
-                        />
+                        <h1 style = "text-center">Heky</h1>
                     </td>
                 </tr>
 

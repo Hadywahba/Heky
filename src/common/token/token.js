@@ -95,17 +95,15 @@ export const decodeToken = async ({ authorization, tokenType, issuer }) => {
         }
     })
 
+    // Check User
+    if (!user) {
+        NotFoundException({ message: "User not found. Please log in again.", })
+    }
+
     if ((user.ChangeAllCredintialTime?.getTime() ?? 0) > payload.iat * 1000) {
         BadRequestException({
             message: ' please login again'
         })
-    }
-
-
-
-    // Check User
-    if (!user) {
-        NotFoundException({ message: "User not found. Please log in again.", })
     }
 
     return { user, payload }

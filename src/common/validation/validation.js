@@ -51,6 +51,13 @@ export const generalFields = {
 
     password: passwordSchema,
 
+    otp: (lang) =>
+    z.string()
+        .nonempty(getValidationMessage(lang, 122))
+        .regex(/^\d{4}$/, {
+            error: getValidationMessage(lang, 121),
+        }),
+
     confirmPassword: (lang) =>
         z.string().nonempty(getValidationMessage(lang, 106)),
 

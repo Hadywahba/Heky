@@ -53,3 +53,8 @@ export const ttl = async ({ key } = {}) => {
 export const expire = async ({ key, ttl } = {}) => {
     return await client.expire(key, ttl)
 }
+
+// Increment
+export const incrBY = async ({ key, value = 1 } = {}) => {
+    return await client.incrBy(key, value)
+}

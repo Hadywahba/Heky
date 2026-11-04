@@ -38,9 +38,6 @@ const userSchema = new mongoose.Schema({
     confirmEmail: {
         type: Date,
     },
-    confirmEmailOTP: {
-        type: String,
-    },
     forgotpasswordOTP: {
         type: String,
     },

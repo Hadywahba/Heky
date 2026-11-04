@@ -58,3 +58,42 @@ export const signUp = (lang) =>
             }),
     });
 
+export const confirmEmail = (lang) => z.object({
+    body: loginSchema(lang).pick({
+        email: true
+    }).extend({
+        otp: generalFields.otp(lang),
+    }),
+})
+
+export const resndConfirmEmail = (lang) => z.object({
+    body: loginSchema(lang).pick({
+        email: true
+    })
+})
+
+export const forgetPassword = (lang) => z.object({
+    body: loginSchema(lang).pick({
+        email: true
+    })
+})
+
+export const verifyPassword = (lang) => z.object({
+    body: loginSchema(lang).pick({
+        email: true
+    }).extend({
+        otp: generalFields.otp(lang),
+    }),
+})
+
+export const resetPassword = (lang) => z.object({
+    body: loginSchema(lang).pick({
+        email: true
+    }).extend({
+        newPassword: generalFields.password(lang),
+        resetToken: z.string().min(1),
+    })
+})
+
+
+

@@ -18,6 +18,8 @@
         "117": "Invalid gender.",
         "118": "Phone number is required.",
         "119": "Please enter a valid phone number in international format.",
-        "120": "Email already exists."
+        "120": "Email already exists.",
+        "121": "OTP must be exactly 4 digits.",
+        "122": "OTP is required."
     }
 }

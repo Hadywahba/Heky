@@ -17,13 +17,6 @@ emailEvent.on('confirmEmail', async ({ recipient, subject, data }) => {
                 code: data.code,
                 subject
             }),
-            attachments: [
-                {
-                    filename: "logo.png",
-                    path: logoPath,
-                    cid: "app-logo",
-                },
-            ],
         })
     } catch (error) {
         console.log(error)
@@ -40,13 +33,6 @@ emailEvent.on('forgotPassword', async ({ recipient, subject, data }) => {
                 code: data.code,
                 subject
             }),
-            attachments: [
-                {
-                    filename: "logo.png",
-                    path: logoPath,
-                    cid: "app-logo",
-                },
-            ],
         })
     } catch (error) {
         console.log(error)

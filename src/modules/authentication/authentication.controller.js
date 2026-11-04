@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { confirmEmail, forgotPassword, login, logOut, resetPassword, rotateToken, signUp, signUpWithGamail, signUpWithGithub } from "./authentication.service.js";
+import { confirmEmail, forgotPassword, login, logOut, resendConfirmEmail, resetPassword, rotateToken, signUp, signUpWithGamail, signUpWithGithub, verifyPassword } from "./authentication.service.js";
 import { successResponse } from "../../common/utils/index.js";
 import { authenticationMiddleware, validation } from "../../middleware/index.js";
 import { TokenTypeEnum } from "../../common/enum/index.js";
@@ -16,9 +16,15 @@ router.post('/signup', validation(validators.signUp), async (req, res, next) => 
 })
 
 // confirm-email
-router.patch('/confirm-email', async (req, res, next) => {
-   await confirmEmail(req.body)
+router.patch('/confirm-email', validation(validators.confirmEmail), async (req, res, next) => {
+   await confirmEmail(req.validate.body, req.language)
    return successResponse({ res, status: 200, message: 'Your email has been successfully confirmed' })
+})
+
+// resend-confirm-email
+router.post('/resend-confirm-email', validation(validators.resndConfirmEmail), async (req, res, next) => {
+   await resendConfirmEmail(req.validate.body, req.language)
+   return successResponse({ res, status: 200, message: 'OTP has been sent to your email again' })
 })
 
 
@@ -57,7 +63,6 @@ router.get(
    }
 );
 
-
 // Sign In
 router.post('/signin', validation(validators.login), async (req, res, next) => {
    const data = await login(req.validate.body, `${req.protocol}://${req.host}`)
@@ -65,17 +70,22 @@ router.post('/signin', validation(validators.login), async (req, res, next) => {
 })
 
 // Forgot Password
-router.patch('/forgot-password', async (req, res, next) => {
-   await forgotPassword(req.body)
+router.post('/forgot-password', validation(validators.forgetPassword), async (req, res, next) => {
+   await forgotPassword(req.validate.body)
    return successResponse({ res, status: 200, message: 'Your OTP has been Sent successfully' })
 })
 
-// Reset Password
-router.patch('/reset-password', async (req, res, next) => {
-   await resetPassword(req.body)
-   return successResponse({ res, status: 200, message: 'Your password has been reset successfully' })
+// Verify Password
+router.post('/verify-password', validation(validators.verifyPassword), async (req, res, next) => {
+   const data = await verifyPassword(req.validate.body);
+   return successResponse({ res, status: 200, message: 'OTP verified successfully. You can now reset your password.', data })
 })
 
+// Reset Password
+router.post('/reset-password', validation(validators.resetPassword), async (req, res, next) => {
+   await resetPassword(req.validate.body)
+   return successResponse({ res, status: 200, message: 'Your password has been reset successfully' })
+})
 
 // Rotate Token
 router.post('/rotate-token',
