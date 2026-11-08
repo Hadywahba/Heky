@@ -9,6 +9,11 @@ node_modules/
 .env.development
 !.env.example
 
+# Uploaded files
+/public/
+public/user-images/
+
+
 # Build output
 dist/
 build/
