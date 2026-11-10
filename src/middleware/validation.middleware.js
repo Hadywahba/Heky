@@ -10,6 +10,8 @@ export const validation = (schema) => {
             body: req.body,
             params: req.params,
             query: req.query,
+            files: req.files,
+            file: req.file,
         });
         if (!validationResult.success) {
             BadRequestException({

@@ -1,0 +1,21 @@
+import z from 'zod';
+import { generalFields } from '../../common/validation/index.js';
+import { getValidationMessage } from '../../common/utils/index.js';
+
+export const messageSchema = (lang) => z.object({
+    body: z.strictObject({
+        receiverId: generalFields.id(lang),
+        content: z.string().trim().min(2, getValidationMessage(lang, 124)).max(50000, getValidationMessage(lang, 125)).optional(),
+    }),
+    files: z.array(generalFields.file(lang)).max(3, getValidationMessage(lang, 127)).optional()
+
+}).superRefine((data, ctx) => {
+    if (!data.body.content && !data.files?.length) {
+        ctx.addIssue({
+            code: 'custom',
+            path: ['content'],
+            message: getValidationMessage(lang, 126),
+        });
+    }
+})
+

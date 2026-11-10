@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { successResponse } from "../../common/utils/index.js";
 import { deleteUser, editUser, showAllUsers, showUser } from "./user.service.js";
-import { authenticationMiddleware, validation } from "../../middleware/index.js";
+import { authenticationMiddleware, UploadMiddleware, validation } from "../../middleware/index.js";
 import * as validators from './user.validation.js'
-import { localFileUpload, proccessMulterUpload } from "../../common/utils/multer/index.js";
+import { localFileUpload} from "../../common/utils/multer/index.js";
 
 const router = Router();
 
@@ -20,19 +20,18 @@ router.get('/profile', authenticationMiddleware(), async (req, res) => {
 })
 
 
-
+// Picture
 router.patch('/profile-picture',
     authenticationMiddleware(),
-    localFileUpload({ validation: ['images'], })
-        .fields([{
-            name: "cover",
-            maxCount: 2
-        }, {
-            name: "attachment",
-            maxCount: 1
-        }]),
-    // .single("attachment"),
-    proccessMulterUpload({ customPath: 'user-images', validation: ['images'], }),
+    UploadMiddleware({
+        multerFn: localFileUpload({ maxFileSize: 5 }).fields([
+            { name: 'cover', maxCount: 2 },
+            { name: 'attachment', maxCount: 1 },
+        ]),
+        customPath: 'user-images',
+        validation: ['images'],
+        isRequired: false                   // it makes send file optional 
+    }),
     async (req, res) => {
         if (req.files.attachment?.length) {
             req.user.image = req.files.attachment[0].finalPath;

@@ -2,6 +2,7 @@
 import z from 'zod';
 import { GenderEnum } from '../enum/index.js';
 import { getValidationMessage } from '../utils/index.js';
+import mongoose from 'mongoose';
 
 
 
@@ -52,19 +53,32 @@ export const generalFields = {
     password: passwordSchema,
 
     otp: (lang) =>
-    z.string()
-        .nonempty(getValidationMessage(lang, 122))
-        .regex(/^\d{4}$/, {
-            error: getValidationMessage(lang, 121),
-        }),
+        z.string()
+            .nonempty(getValidationMessage(lang, 122))
+            .regex(/^\d{4}$/, {
+                error: getValidationMessage(lang, 121),
+            }),
 
     confirmPassword: (lang) =>
         z.string().nonempty(getValidationMessage(lang, 106)),
+
+    id: (lang) =>
+        z.string().refine((data) => { return mongoose.Types.ObjectId.isValid(data) }, getValidationMessage(lang, 106)),
 
     gender: (lang) =>
         z.enum(GenderEnum, {
             error: getValidationMessage(lang, 117),
         }).default(GenderEnum.MALE),
+
+    file: (lang) =>
+        z.strictObject({
+            fieldname: z.string(),
+            originalname: z.string(),
+            encoding: z.string(),
+            mimetype: z.string(),
+            size: z.number(),
+            buffer: z.instanceof(Buffer),
+        }),
 
 
     matchFields,

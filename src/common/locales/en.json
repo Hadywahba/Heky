@@ -20,6 +20,17 @@
         "119": "Please enter a valid phone number in international format.",
         "120": "Email already exists.",
         "121": "OTP must be exactly 4 digits.",
-        "122": "OTP is required."
+        "122": "OTP is required.",
+        "123": "Invalid format",
+        "124": "Content must be at least 2 characters long",
+        "125": "Content cannot exceed 50,000 characters",
+        "126": "Please provide content or attach at least one file",
+        "127": "You can upload a maximum of 3 files",
+        "128": "Field name must be a string",
+        "129": "Original file name must be a string",
+        "130": "Encoding must be a string",
+        "131": "File MIME type must be a string",
+        "132": "File size must be a number",
+        "133": "File path must be a string"
     }
 }

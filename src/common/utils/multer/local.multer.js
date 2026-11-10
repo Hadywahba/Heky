@@ -2,9 +2,9 @@ import multer from "multer"
 import { randomUUID } from "node:crypto"
 import { BadRequestException } from "../../exceptions/index.js"
 import { resolve } from "node:path";
-import { readFile } from "fs/promises"
 import { fileTypeFromBuffer } from "file-type"
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir,  writeFile } from "node:fs/promises";
+
 
 const fileValidation = {
     images: [
@@ -81,7 +81,7 @@ const validateFile = async ({ file, validation }) => {
 };
 
 
-export const localFileUpload = ({ maxFileSize = 5, validation = ['images', 'videos', 'files'] } = {}) => {
+export const localFileUpload = ({ maxFileSize = 5 } = {}) => {
     // const storage = multer.diskStorage({
     //     destination: (req, file, cb) => {
     //         cb(null, './public')
@@ -97,7 +97,7 @@ export const localFileUpload = ({ maxFileSize = 5, validation = ['images', 'vide
 
     const storage = multer.memoryStorage()
     return multer({
-        fileFilter: createFileFilter(validation),
+        // fileFilter: createFileFilter(validation),
         storage,
         limits: { fileSize: maxFileSize * 1024 * 1024 }           // 5 MByte
     })
@@ -109,7 +109,7 @@ export const proccessFile = async ({ customPath = 'assets', file, validation = [
     await mkdir(resolve(`./public/${customPath}`), { recursive: true })
     const uniquePath = `public/${customPath}/${randomUUID()}.${result.ext}`
     await writeFile(resolve(`./${uniquePath}`), file.buffer);
-    file.finalPath = uniquePath
+    file.path = uniquePath
     return file
 
 }
@@ -153,26 +153,44 @@ export const proccessFields = async ({ customPath, fields = {}, validation = [] 
 };
 
 
-export const proccessMulterUpload = ({ customPath = 'assets', validation = [] }) => {
-    return async (req, res, next) => {
+export const proccessMulterUpload = async ({ req, customPath = 'assets', validation = [] }) => {
 
-        if (req.file) {
-            req.file = await proccessFile({ customPath, file: req.file, validation });
-            req.file = removeBuffer(req.file);
-        } else if (Array.isArray(req.files) && req.files.length) {
-            req.files = await proccessFiles({ customPath, files: req.files, validation });
-            req.files = req.files.map(removeBuffer);
-        } else if (typeof req.files == "object" && Object.keys(req.files ?? {})?.length) {
-            req.files = await proccessFields({ customPath, fields: req.files, validation });
-            for (const field of Object.keys(req.files)) {
-                req.files[field] = req.files[field].map(removeBuffer);
-            }
+
+    if (req.file) {
+        req.file = await proccessFile({ customPath, file: req.file, validation });
+        req.file = removeBuffer(req.file);
+    } else if (Array.isArray(req.files) && req.files.length) {
+        req.files = await proccessFiles({ customPath, files: req.files, validation });
+        req.files = req.files.map(removeBuffer);
+    } else if (typeof req.files == "object" && Object.keys(req.files ?? {})?.length) {
+        req.files = await proccessFields({ customPath, fields: req.files, validation });
+        for (const field of Object.keys(req.files)) {
+            req.files[field] = req.files[field].map(removeBuffer);
         }
-
-        next();
-
     }
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //****************************** save success files from wrong files */
 // export const proccessFiles = async ({ files = [], validation = [] }) => {
