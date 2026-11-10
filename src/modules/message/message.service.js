@@ -4,7 +4,7 @@ import { ConvertToObjectId } from "../../common/utils/index.js";
 import { MessageModel, UserModel } from "../../DB/model/index.js";
 
 // Add message
-export const createMessage = async ({ content, receiverId } = {}, files = []) => {
+export const createMessage = async ({ content, receiverId } = {}, files = [], user = undefined) => {
     const checkRecevier = await findById({
         model: UserModel,
         id: ConvertToObjectId(receiverId),
@@ -21,7 +21,8 @@ export const createMessage = async ({ content, receiverId } = {}, files = []) =>
         data: {
             receiverId,
             content,
-            attachments: files.map(ele => ele.path)
+            attachments: files.map(ele => ele.path),
+            ...(user ? { senderId: user._id } : {})
         }
     })
     return message;
