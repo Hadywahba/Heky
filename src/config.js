@@ -56,3 +56,6 @@ export const FACEBOOK_URL = process.env.FACEBOOK_URL;
 export const INSTAGRAM_URL = process.env.INSTAGRAM_URL;
 export const LINKEDIN_URL = process.env.LINKEDIN_URL;
 export const X_URL = process.env.X_URL;
+
+// Cors
+export const CORS_LIST = process.env.CORS_LIST;

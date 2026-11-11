@@ -25,8 +25,11 @@ export const insertMany = async ({ model, data, options = {} } = {}) => {
 };
 
 // Find
-export const find = async ({ model, filter = {}, options = {}, select = '' } = {}) => {
-    const doc = model.find(filter, options).select(select);
+export const find = async ({ model, filter = {}, options = {} } = {}) => {
+    const doc = model.find(filter);
+    if (options.select) {
+        doc.select(options.select)
+    }
     if (options.populate) {
         doc.populate(options.populate)
     }
@@ -34,8 +37,13 @@ export const find = async ({ model, filter = {}, options = {}, select = '' } = {
     if (options.skip) {
         doc.skip(options.skip)
     }
+
+    if (options.sort) {
+        doc.sort(options.sort)
+    }
+
     if (options.limit) {
-        doc.skip(options.limit)
+        doc.limit(options.limit)
     }
 
     if (options.lean) {
@@ -46,8 +54,11 @@ export const find = async ({ model, filter = {}, options = {}, select = '' } = {
 };
 
 // FindOne
-export const findOne = async ({ model, filter = {}, options = {}, select = '' } = {}) => {
-    const doc = model.findOne(filter, options).select(select);
+export const findOne = async ({ model, filter = {}, options = {} } = {}) => {
+    const doc = model.findOne(filter);
+    if (options.select) {
+        doc.select(options.select)
+    }
     if (options.populate) {
         doc.populate(options.populate)
     }
@@ -249,8 +260,8 @@ export const findByIdAndDelete = async ({ model, id, options = {} } = {}) => {
 };
 
 // CountDocuments
-export const countDocuments = async ({ model, filter = {}, options = {} } = {}) => {
-    return await model.countDocuments(filter, options);
+export const countDocuments = async ({ model, filter = {} } = {}) => {
+    return await model.countDocuments(filter);
 };
 
 // Exists
@@ -277,3 +288,38 @@ export const distinct = async ({
 } = {}) => {
     return await model.distinct(field, filter, options);
 };
+
+// Paginate
+export const paginate = async ({ model, filter = {}, options = {}, page = 1, limit = 5 } = {}) => {
+    // Skip
+    const skip = (page - 1) * limit;
+
+    // Count Doc
+    const count = await countDocuments({
+        model,
+        filter
+    })
+
+    // Pages
+    const pages = Math.ceil(count / limit)
+
+    const docs = await find({
+        model,
+        filter,
+        options: {
+            ...options,
+            limit,
+            skip
+        }
+    })
+
+    return {
+        metaData: {
+            TotalPages: pages,
+            limit,
+            count,
+            page
+        },
+        docs
+    }
+}

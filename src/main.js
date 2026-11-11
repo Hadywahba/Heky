@@ -7,14 +7,17 @@ import { PORT } from './config.js';
 import { bootstrapDB } from './DB/connection.db.js';
 import cors from 'cors'
 import passport from "passport";
-
+import { corsOptions } from './common/utils/index.js';
+import helmet from "helmet";
 
 
 
 
 
 const app = express()
-app.use(cors())
+
+
+app.use(helmet(), cors(corsOptions()))
 app.use(express.json());
 app.use(passport.initialize());
 app.use('/public', express.static('public'));

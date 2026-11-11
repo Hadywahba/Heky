@@ -23,7 +23,10 @@ export const messageSchema = (lang) => z.object({
 export const ShowmessageSchema = (lang) => z.object({
     query: z.strictObject({
         type: z.enum(['sender', 'receiver', 'all']).default('all'),
-        search: z.string().trim().optional()
+        search: z.string().trim().optional(),
+        status: z.enum(['pending', 'accept', 'reject']).default('pending'),
+        page: z.coerce.number().default(1),
+        limit: z.coerce.number().default(5),
     })
 })
 

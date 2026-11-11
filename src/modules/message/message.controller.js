@@ -29,7 +29,7 @@ router.get('/',
     validation(validators.ShowmessageSchema),
     async (req, res) => {
         const data = await getMessages(req.validate.query, req.user)
-        const message = req.validate.query.search && !data.length
+        const message = req.validate.query.search && !data.messages.length
             ? 'No messages found matching your search'
             : 'Messages fetched successfully';
         return successResponse({ res, status: 200, data, message })
