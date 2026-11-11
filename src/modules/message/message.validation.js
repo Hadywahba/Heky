@@ -19,3 +19,13 @@ export const messageSchema = (lang) => z.object({
     }
 })
 
+
+export const ShowmessageSchema = (lang) => z.object({
+    query: z.strictObject({
+        type: z.enum(['sender', 'receiver', 'all']).default('all'),
+        search: z.string().trim().optional()
+    })
+})
+
+
+

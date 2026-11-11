@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { successResponse } from "../../common/utils/index.js";
-import { createMessage } from "./message.service.js";
+import { createMessage, getMessages } from "./message.service.js";
 import * as validators from './message.validation.js'
-import { optionalAuthenticationMiddleware, saveMessageFiles, UploadMiddleware, validation } from "../../middleware/index.js";
+import { authenticationMiddleware, optionalAuthenticationMiddleware, saveMessageFiles, UploadMiddleware, validation } from "../../middleware/index.js";
 import { localFileUpload } from "../../common/utils/multer/index.js";
 
 const router = Router();
@@ -21,6 +21,18 @@ router.post('/',
         const data = await createMessage(req.validate.body, req.files, req.user, req.language)
 
         return successResponse({ res, status: 201, message: "Message added Successfully", data })
+    })
+
+// Get Messages
+router.get('/',
+    authenticationMiddleware(),
+    validation(validators.ShowmessageSchema),
+    async (req, res) => {
+        const data = await getMessages(req.validate.query, req.user)
+        const message = req.validate.query.search && !data.length
+            ? 'No messages found matching your search'
+            : 'Messages fetched successfully';
+        return successResponse({ res, status: 200, data, message })
     })
 
 
