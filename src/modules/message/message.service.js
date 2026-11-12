@@ -15,13 +15,12 @@ export const createMessage = async ({ content, receiverId, isAnonymous } = {}, f
             message: 'Invalid Receiver Id',
         });
     }
-
     const message = await createOne({
         model: MessageModel,
         data: {
             receiverId,
             content,
-            isAnonymous,
+            isAnonymous: user ? isAnonymous : true,
             attachments: files.map(ele => ele.path),
             ...(user ? { senderId: user._id } : {})
         }
