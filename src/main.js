@@ -1,7 +1,7 @@
 
 import express from 'express'
 import "./common/github/index.js";
-import { authenticationController, messageController, userController } from './modules/index.js';
+import { authenticationController, messageController, userController, identityController } from './modules/index.js';
 import { globalErrorHandling } from './middleware/index.js';
 import { PORT } from './config.js';
 import { bootstrapDB } from './DB/connection.db.js';
@@ -28,6 +28,7 @@ app.get('/', (req, res) => res.send('Welcome To Our API'))
 app.use('/auth', authenticationController)
 app.use('/message', messageController)
 app.use('/user', userController)
+app.use('/identity-request', identityController)
 
 
 // Routing Error

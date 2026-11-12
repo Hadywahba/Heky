@@ -1,6 +1,6 @@
 import mongoose from "mongoose"
 import { DB_URI } from "../config.js";
-import { MessageModel, UserModel } from "./model/index.js";
+import { IdentityRequestModel, MessageModel, UserModel } from "./model/index.js";
 import { connectionRedis } from "./redis.connection.js";
 
 
@@ -13,6 +13,7 @@ export const bootstrapDB = async (app, port) => {
         await connectionRedis()
         await UserModel.syncIndexes();
         await MessageModel.syncIndexes();
+         await IdentityRequestModel.syncIndexes();
         app.listen(port, () => console.log(`Example app listening on port ${port}!`))
 
     } catch (error) {

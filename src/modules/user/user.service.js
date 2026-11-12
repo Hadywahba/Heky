@@ -3,7 +3,7 @@ import { UserModel } from "../../DB/model/index.js"
 import { ConflictException, NotFoundException } from "../../common/exceptions/index.js";
 import { find, findByIdAndDelete, findByIdAndUpdate, findOne } from "../../common/repository/index.js";
 import { decrypt } from "../../common/security/index.js";
-import { del, get, keys, set } from "../../common/services/index.js";
+import { del, get, set } from "../../common/services/index.js";
 import { userProfileKey } from "../../common/token/index.js";
 import { ConvertToObjectId, getValidationMessage } from "../../common/utils/index.js";
 
