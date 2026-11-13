@@ -225,7 +225,6 @@ export const respondIdentityRequest = async (requestId, status, user) => {
 
     return {
         request: updatedRequest,
-        sender: status === "accepted" ? updatedRequest.senderId : null
     };
 };
 
