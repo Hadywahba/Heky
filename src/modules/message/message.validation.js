@@ -34,5 +34,12 @@ export const ShowmessageSchema = (lang) => z.object({
     })
 })
 
+export const ShowmessagSchema = (lang) => z.object({
+    params: z.strictObject({
+        messageId: generalFields.id(lang)
+    })
+})
+
+
 
 

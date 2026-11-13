@@ -1,7 +1,7 @@
-import { NotFoundException } from "../../common/exceptions/index.js";
-import { createOne, find, findById, paginate } from "../../common/repository/index.js";
-import { ConvertToObjectId, getOtherUser } from "../../common/utils/index.js";
-import { IdentityRequestModel, MessageModel, UserModel } from "../../DB/model/index.js";
+import { ForbiddenException, NotFoundException } from "../../common/exceptions/index.js";
+import { createOne, deleteOne, findById, paginate } from "../../common/repository/index.js";
+import { ConvertToObjectId } from "../../common/utils/index.js";
+import { MessageModel, UserModel } from "../../DB/model/index.js";
 
 // Add message
 export const createMessage = async ({ content, receiverId, isAnonymous } = {}, files = [], user = undefined) => {
@@ -104,5 +104,93 @@ export const getMessages = async (
         messages
     };
 
+
+};
+
+// Show Message
+export const getMessage = async ({ messageId }, user) => {
+
+    const existMessage = await findById({
+        model: MessageModel,
+        id: messageId,
+        options: {
+            populate: [
+                {
+                    path: 'senderId',
+                    select: 'firstName lastName image DOB'
+                },
+                {
+                    path: 'receiverId',
+                    select: 'firstName lastName image DOB'
+                }
+            ]
+        }
+    })
+
+    if (!existMessage) {
+        NotFoundException({
+            message: "Message not found"
+        });
+    }
+
+    const isSender = existMessage.senderId?.equals(user._id);
+    const isReceiver = existMessage.receiverId.equals(user._id);
+
+    if (!isSender && !isReceiver) {
+        ForbiddenException({
+            message: "You are not allowed to show to this message"
+        });
+    }
+
+    const messageData = existMessage.toObject();
+
+    if (isSender || (isReceiver && existMessage.isAnonymous)) {
+        delete messageData.senderId;
+    }
+
+    if (isReceiver) {
+        delete messageData.receiverId;
+    }
+
+    return messageData;
+
+};
+
+// Delete Message
+export const deleteMessage = async ({ messageId }, user) => {
+
+    const existMessage = await findById({
+        model: MessageModel,
+        id: messageId,
+    })
+
+    if (!existMessage) {
+        NotFoundException({
+            message: "Message not found"
+        });
+    }
+    const isReceiver = existMessage.receiverId.equals(user._id);
+
+    if (!isReceiver) {
+        ForbiddenException({
+            message: "You are not allowed to delete to this message"
+        });
+    }
+
+    const data = await deleteOne({
+        model: MessageModel,
+        filter: {
+            receiverId: user._id,
+            _id: messageId
+        }
+    })
+
+    if (!data.deletedCount) {
+        NotFoundException({
+            message: "Message not found"
+        });
+    }
+
+    return data;
 
 };
