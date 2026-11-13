@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from "../../common/exceptions/index.js";
 import { createOne, findById, findByIdAndUpdate, findOne } from "../../common/repository/index.js";
-import { MessageModel, IdentityRequestModel } from "../../DB/model/index.js";
+import { MessageModel, IdentityRequestModel, ConversationModel } from "../../DB/model/index.js";
 
 
 export const createIdentityRequest = async (messageId, user) => {
@@ -77,6 +77,47 @@ export const showRequest = async (requestId, user) => {
     return existingRequest;
 };
 
+export const showIdentity = async (requestId, user) => {
+
+    const existingRequest = await findOne({
+        model: IdentityRequestModel,
+        filter: {
+            _id: requestId,
+            $or: [
+                { receiverId: user._id },
+                { senderId: user._id }
+            ],
+
+        },
+        options: {
+            populate: [
+                {
+                    path: 'senderId',
+                    select: 'firstName lastName image DOB'
+                },
+                {
+                    path: 'messageId',
+                    select: 'content isAnonymous'
+                }
+            ]
+        }
+    });
+
+    if (!existingRequest) {
+        NotFoundException({
+            message: "Identity request not found"
+        });
+    }
+
+    const requestData = existingRequest.toObject();
+
+    if (existingRequest.status !== 'accepted') {
+        delete requestData.senderId;
+    }
+
+    return requestData;
+};
+
 export const respondIdentityRequest = async (requestId, status, user) => {
 
     const identityRequest = await findById({
@@ -122,49 +163,37 @@ export const respondIdentityRequest = async (requestId, status, user) => {
         });
     }
 
+    const participants = [
+        identityRequest.senderId,
+        identityRequest.receiverId
+    ].sort((a, b) =>
+        a.toString().localeCompare(b.toString())
+    );
+
+    const participantKey = participants
+        .map(id => id.toString())
+        .join("_");
+
+    let conversation = await findOne({
+        model: ConversationModel,
+        filter: { participantKey }
+    });
+
+    if (!conversation) {
+        conversation = await createOne({
+            model: ConversationModel,
+            data: {
+                participants,
+                participantKey,
+                status: "accepted",
+                messages: []
+            }
+        });
+    }
     return {
         request: updatedRequest,
         sender: status === "accepted" ? updatedRequest.senderId : null
     };
-};
+}
 
-export const showIdentity = async (requestId, user) => {
 
-    const existingRequest = await findOne({
-        model: IdentityRequestModel,
-        filter: {
-            _id: requestId,
-            $or: [
-                { receiverId: user._id },
-                { senderId: user._id }
-            ],
-
-        },
-        options: {
-            populate: [
-                {
-                    path: 'senderId',
-                    select: 'firstName lastName image DOB'
-                },
-                {
-                    path: 'messageId',
-                    select: 'content isAnonymous'
-                }
-            ]
-        }
-    });
-
-    if (!existingRequest) {
-        NotFoundException({
-            message: "Identity request not found"
-        });
-    }
-
-    const requestData = existingRequest.toObject();
-
-    if (existingRequest.status !== 'accepted') {
-        delete requestData.senderId;
-    }
-
-    return requestData;
-};
