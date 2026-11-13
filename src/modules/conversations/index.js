@@ -1,0 +1,1 @@
+export { default as conversationController } from './conversations.controller.js'

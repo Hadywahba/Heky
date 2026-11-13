@@ -1,7 +1,7 @@
 
 import express from 'express'
 import "./common/github/index.js";
-import { authenticationController, messageController, userController, identityController } from './modules/index.js';
+import { authenticationController, messageController, userController, identityController, conversationController } from './modules/index.js';
 import { globalErrorHandling } from './middleware/index.js';
 import { PORT } from './config.js';
 import { bootstrapDB } from './DB/connection.db.js';
@@ -29,7 +29,7 @@ app.use('/auth', authenticationController)
 app.use('/message', messageController)
 app.use('/user', userController)
 app.use('/identity-request', identityController)
-
+app.use('/conversation', conversationController)
 
 // Routing Error
 app.all('/*dummy', (req, res) => {

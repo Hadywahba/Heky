@@ -24,7 +24,10 @@ const conversationSchema = new mongoose.Schema({
         default: "pending"
     },
     messages: {
-        type: [String],
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Message"
+        }],
         default: []
     }
 }, {

@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from "../../common/exceptions/index.js";
 import { createOne, findById, findByIdAndUpdate, findOne } from "../../common/repository/index.js";
-import { MessageModel, IdentityRequestModel, ConversationModel } from "../../DB/model/index.js";
+import { MessageModel, IdentityRequestModel, ConversationModel, ConversationMessageModel } from "../../DB/model/index.js";
 
 
 export const createIdentityRequest = async (messageId, user) => {
@@ -118,8 +118,8 @@ export const showIdentity = async (requestId, user) => {
     return requestData;
 };
 
+// Respond Identity Request
 export const respondIdentityRequest = async (requestId, status, user) => {
-
     const identityRequest = await findById({
         model: IdentityRequestModel,
         id: requestId
@@ -155,45 +155,78 @@ export const respondIdentityRequest = async (requestId, status, user) => {
         }
     });
 
-    if (updatedRequest.status === "accepted") {
+    if (status === "accepted") {
+
+        // Get Original Message
+        const originalMessage = await findById({
+            model: MessageModel,
+            id: identityRequest.messageId
+        });
+
+        // Reveal Sender Identity
         await findByIdAndUpdate({
             model: MessageModel,
             id: identityRequest.messageId,
             update: { isAnonymous: false }
         });
-    }
 
-    const participants = [
-        identityRequest.senderId,
-        identityRequest.receiverId
-    ].sort((a, b) =>
-        a.toString().localeCompare(b.toString())
-    );
+        // Generate Participants Key
+        const participants = [
+            identityRequest.senderId,
+            identityRequest.receiverId
+        ].sort((a, b) =>
+            a.toString().localeCompare(b.toString())
+        );
 
-    const participantKey = participants
-        .map(id => id.toString())
-        .join("_");
+        const participantKey = participants
+            .map(id => id.toString())
+            .join("_");
 
-    let conversation = await findOne({
-        model: ConversationModel,
-        filter: { participantKey }
-    });
-
-    if (!conversation) {
-        conversation = await createOne({
+        // Find Or Create Conversation
+        let conversation = await findOne({
             model: ConversationModel,
-            data: {
-                participants,
-                participantKey,
-                status: "accepted",
-                messages: []
+            filter: { participantKey }
+        });
+
+        if (!conversation) {
+            conversation = await createOne({
+                model: ConversationModel,
+                data: {
+                    participants,
+                    participantKey,
+                    status: "accepted",
+                    messages: []
+                }
+            });
+        }
+
+        // Check If Original Message Already Copied
+        const existingConversationMessage = await findOne({
+            model: ConversationMessageModel,
+            filter: {
+                sourceMessageId: originalMessage._id
             }
         });
+
+        // Copy Original Message To Conversation
+        if (!existingConversationMessage) {
+            await createOne({
+                model: ConversationMessageModel,
+                data: {
+                    conversationId: conversation._id,
+                    senderId: originalMessage.senderId,
+                    content: originalMessage.content,
+                    attachments: originalMessage.attachments,
+                    sourceMessageId: originalMessage._id
+                }
+            });
+        }
     }
+
     return {
         request: updatedRequest,
         sender: status === "accepted" ? updatedRequest.senderId : null
     };
-}
+};
 
 
